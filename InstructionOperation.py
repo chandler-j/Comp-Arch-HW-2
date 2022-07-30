@@ -77,14 +77,13 @@ class TypeR(Instruction):
 class InstructionTypePicker(object):
     def __init__(self, registers):
         self.registers = registers
-        # self.instructionTypeMask = 0b0001
 
     def chooseInstructionType(self, instructionType, opcode, register, immediate=None):
         if instructionType == InstructionType.TypeI.value:
-            from InstructionTypes import TypeI as Instruction
+            from InstructionOperation import TypeI as Instruction
             instruction = Instruction(opcode, register, self.registers, immediate)
         elif instructionType == InstructionType.TypeR.value:
-            from InstructionTypes import TypeR as Instruction
+            from InstructionOperation import TypeR as Instruction
             instruction = Instruction(opcode, register, self.registers)
 
         

@@ -1,10 +1,10 @@
 # Class to interpret the input instructions
 
-from InstructionTypes import InstructionTypePicker
+from InstructionOperation import InstructionTypePicker
 from Registers import Registers
 from Registers import RegistersOptions
-from InstructionTypes import OperationCode
-from InstructionTypes import InstructionType
+from InstructionOperation import OperationCode
+from InstructionOperation import InstructionType
 
 class InstructionInterpreter():
     def __init__(self):
