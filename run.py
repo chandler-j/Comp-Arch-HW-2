@@ -6,5 +6,5 @@ Simple run file to open instructions.txt file and begin interpretation and writi
 file = open('instructions.txt', 'r')
 interpreter = InstructionInterpreter()
 for line in file.readlines():
-    interpreter.interpretFile(line)
+    interpreter.interpretFile(instruction=line)
     print(interpreter.Regs.RegValues)
