@@ -1,0 +1,20 @@
+addi R1, 10
+sub R3
+muli R1, 2
+add R2
+sub R2
+mul R1
+div R2
+addi R2, 5
+subi R3, 5
+muli R2, 2
+divi R1, 20
+add R1
+sub R1
+div R1
+add R3
+mul R3
+mul R2
+subi R2, 1070
+addi R1, 4
+div R3
