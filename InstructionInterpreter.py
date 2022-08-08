@@ -1,54 +1,112 @@
 # Class to interpret the input instructions
 
-from InstructionOperation import InstructionPicker
+# from InstructionOperation import InstructionPicker
 from Registers import Registers
 from Registers import RegistersOptions
 from InstructionOperation import OperationCode
-from InstructionOperation import InstructionType
+#from InstructionOperation import InstructionType
+from InstructionOperation import Instruction
+import sys
+from bitarray import bitarray
+from bitarray.util import int2ba
+#from InstructionOperation import Execute
 
+import re
 """
 Interprets the text file and chooses the registers, opcode, instruction type, and immediate value
 """
 class InstructionInterpreter():
     def __init__(self):
         self.Regs = Registers()
+        self.regex = " |, "
 
     """
     RType instruction format: <add,sub,mul,div> <R1,R2,R3>
     IType instruction format: <addi,subi,muli,divi> <R1,R2,R3>, <immediate#>
     """
     def interpretFile(self, instruction):
-        # If there's a comma, it's an immediate instruction
-        if ',' in instruction: 
-            immediate = instruction.split(', ')[1]
-            immediate = immediate.split('\n')[0]
-        else: immediate=None
 
-        # Choose the register for the instruction
-        if 'R1' in instruction:
-            register = RegistersOptions.R1.value
-        elif 'R2' in instruction:
-            register = RegistersOptions.R2.value
-        elif 'R3' in instruction:
-            register = RegistersOptions.R3.value
+        """
+        parse instructions
+        """
+        fields = re.split(self.regex, instruction.strip("\n"))
+        print(fields)
+      
+        # grab instruction length
+        ins_len = len(fields)
 
-        # Choose the opcode for the instruction
-        if 'add' in instruction:
-            opcode = OperationCode.ADD.value
-        elif 'sub' in instruction:
-            opcode = OperationCode.SUB.value
-        elif 'mul' in instruction:
-            opcode = OperationCode.MUL.value
-        elif 'div' in instruction:
-            opcode = OperationCode.DIV.value
+        # grab the instruction to be completed 
+        # validate it's a valid instruction
+        # return the binary representation of the opcode
+        operation = fields[0].upper()
+        opcode = self.get_opcode(operation)
         
-        # If there's an i at the end of the instruction, it's an immediate instruction
-        if 'i' in instruction and not 'div ' in instruction:
-            instruction_type = InstructionType.TypeI.value
+        # validates length and operation
+        self.validate_length(ins_len, operation)
+
+        # populate the target 
+        # validates the target ( it will always be a register)
+        # return the binary representation of the target register
+        target = fields[1]
+        opcode.extend(self.get_regcode(target))
+
+        # populate op_a, and op_b
+        # in 3 arg instructions, op_a == target
+        # validate the operands
+        op_a, op_b = fields[len(fields) -2 : len(fields)]
+        operandcodes = self.get_operandcodes(op_a, op_b, ins_len)
+
+        opcode.extend(operandcodes)
+
+        print(opcode)
+    
+        ins = Instruction(operation, target, op_a, op_b, ins_len)
+        return ins
+
+
+    def get_opcode(self, operation):
+        if operation not in OperationCode._member_names_:
+            sys.exit("INVALID INSTRUCTION")
+        return bitarray(getattr(OperationCode, operation).value)
+
+    def get_regcode(self, register):
+        if register not in RegistersOptions._member_names_:
+            sys.exit("INVALID REGISTER")
+        return  bitarray(getattr(RegistersOptions, register).value)
+
+    def validate_length(self, length, operand):
+        immediates=["ADDI", "SUBI","MULI", "DIVI"]
+        if length == 3:
+            if operand not in immediates:
+                sys.exit("INVALID INSTRUCTION LENGTH")
+        elif length == 4:
+            if operand in immediates:
+                sys.exit("INVALID INSTRUCTION LENGTH")
         else:
-            instruction_type = InstructionType.TypeR.value
+            sys.exit("INVALID INSTRUCTION LENGHT")
 
-        # Perform the instruction on registers
-        InstructionPicker(registers=self.Regs).performInstruction(instructionType=instruction_type, opcode=opcode, register=register, immediate=immediate)
+    def get_operandcodes(self, op_a, op_b, length):
+        if length == 3:
+            opa = self.get_int(op_b)
+        elif length == 4:
+            opa = self.get_regcode(op_a)
+            opa.extend(self.get_regcode(op_b))
+        else:
+           sys.exit("INVALID INSTRUCTION LENGTH")
+        return opa
 
+    def get_int(self, integer):
+        if not integer.isdigit():
+            sys.exit("MUST PASS INTEGER TO IMMEDIATE INSTRUCTION")
+        else:
+            integer = int(integer)
+            word = bitarray('11111111')
+            opb = ''
+            if integer >= 256:
+                opb = word
+            else:
+                opb = int2ba(int(integer), 8)
+                opb &= word
+            return opb
 
+           

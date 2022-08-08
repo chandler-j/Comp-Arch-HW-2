@@ -3,116 +3,84 @@
 from abc import abstractmethod
 from Registers import RegistersOptions
 import enum
+import sys
+from bitarray import bitarray
+from bitarray.util import int2ba
 
 """
 Opcode Options
 """
 class OperationCode(enum.Enum):
-    ADD = 0b00
-    SUB = 0b01
-    MUL = 0b10
-    DIV = 0b11
-
-"""
-Instruction Type Options
-"""
-class InstructionType(enum.Enum):
-    TypeR = 0
-    TypeI = 1
+    ADD =  '0000'
+    SUB =  '0001'
+    MUL =  '0010'
+    DIV =  '0011'
+    ADDI = '1000'
+    SUBI = '1001'
+    MULI = '1010'
+    DIVI = '1011'
 
 """
 Base class for our instructions
 """
+
 class Instruction(object):
-    def __init__(self, opcode, register, registers, immediate=None):
-        self.registers = registers
-        self.opcode = opcode
-        self.register = register
-        self.immediate = immediate
+    def __init__(self, operation, target, op_a, op_b, ins_len):
+        
+        self.operation = operation
+        self.target = target
+        self.op_a = op_a
+        self.op_b = op_b
+        self.ins_len = ins_len
 
-    """
-    Performs the operation specified by the opcode
-    """
-    @abstractmethod
-    def performOperation(self):
-        pass
-
-"""
-Type I instruction with it's operation
-"""
-class TypeI(Instruction):
-    def __init__(self, opcode, register, registers, immediate):
-        super().__init__(opcode=opcode, register=register, registers=registers, immediate=immediate)
-
-    """
-    Performs the operation specified by the opcode
-    """
-    def performOperation(self):
-        if self.opcode == OperationCode.ADD.value:
-            save_value = self.registers.getReg(self.register) + int(self.immediate)
-        elif self.opcode == OperationCode.SUB.value:
-            save_value = self.registers.getReg(self.register) - int(self.immediate)
-        elif self.opcode == OperationCode.MUL.value:
-            save_value = self.registers.getReg(self.register) * int(self.immediate)
-        elif self.opcode == OperationCode.DIV.value:
-            save_value = self.registers.getReg(self.register) / int(self.immediate)
-        return save_value
-
-"""
-Type R instruction with it's operation
-"""
-class TypeR(Instruction):
-    def __init__(self, opcode, register, registers):
-        super().__init__(opcode=opcode, register=register, registers=registers)
-
-    """
-    Performs the operation specified by the opcode
-    """
-    def performOperation(self):
-        if self.register == RegistersOptions.R1.value:
-            if self.opcode == OperationCode.ADD.value:
-                save_value = self.registers.getReg(RegistersOptions.R2.value) + self.registers.getReg(RegistersOptions.R3.value)
-            elif self.opcode == OperationCode.SUB.value:
-                save_value = self.registers.getReg(RegistersOptions.R2.value) - self.registers.getReg(RegistersOptions.R3.value)
-            elif self.opcode == OperationCode.MUL.value:
-                save_value = self.registers.getReg(RegistersOptions.R2.value) * self.registers.getReg(RegistersOptions.R3.value)
-            elif self.opcode == OperationCode.DIV.value:
-                save_value = self.registers.getReg(RegistersOptions.R2.value) / self.registers.getReg(RegistersOptions.R3.value)
-        elif self.register == RegistersOptions.R2.value:
-            if self.opcode == OperationCode.ADD.value:
-                save_value = self.registers.getReg(RegistersOptions.R1.value) + self.registers.getReg(RegistersOptions.R3.value)
-            elif self.opcode == OperationCode.SUB.value:
-                save_value = self.registers.getReg(RegistersOptions.R1.value) - self.registers.getReg(RegistersOptions.R3.value)
-            elif self.opcode == OperationCode.MUL.value:
-                save_value = self.registers.getReg(RegistersOptions.R1.value) * self.registers.getReg(RegistersOptions.R3.value)
-            elif self.opcode == OperationCode.DIV.value:
-                save_value = self.registers.getReg(RegistersOptions.R1.value) / self.registers.getReg(RegistersOptions.R3.value)
-        elif self.register == RegistersOptions.R3.value:
-            if self.opcode == OperationCode.ADD.value:
-                save_value = self.registers.getReg(RegistersOptions.R1.value) + self.registers.getReg(RegistersOptions.R2.value)
-            elif self.opcode == OperationCode.SUB.value:
-                save_value = self.registers.getReg(RegistersOptions.R1.value) - self.registers.getReg(RegistersOptions.R2.value)
-            elif self.opcode == OperationCode.MUL.value:
-                save_value = self.registers.getReg(RegistersOptions.R1.value) * self.registers.getReg(RegistersOptions.R2.value)
-            elif self.opcode == OperationCode.DIV.value:
-                save_value = self.registers.getReg(RegistersOptions.R1.value) / self.registers.getReg(RegistersOptions.R2.value)
-        return save_value
 
 """
 Picks which instruction type based on instructionType bit setting
 """
-class InstructionPicker(object):
+class Executer:
     def __init__(self, registers):
         self.registers = registers
+        self.operations = {}
+        self.operations["ADD"]   = self.add
+        self.operations["SUB"]   = self.sub
+        self.operations["MUL"]  = self.mul
+        self.operations["DIV"]   = self.div
+        self.operations["ADDI"]  = self.addi
+        self.operations["SUBI"]  = self.subi
+        self.operations["MULI"] = self.muli
+        self.operations["DIVI"]  = self.divi
 
-    def performInstruction(self, instructionType, opcode, register, immediate=None):
-        if instructionType == InstructionType.TypeI.value:
-            from InstructionOperation import TypeI as Instruction
-            instruction = Instruction(opcode, register, self.registers, immediate)
-        elif instructionType == InstructionType.TypeR.value:
-            from InstructionOperation import TypeR as Instruction
-            instruction = Instruction(opcode, register, self.registers)
+    def execute(self,instruction):
 
-        # Perform instruction operation and save it to register
-        value = instruction.performOperation()
-        self.registers.saveReg(register, value)
+
+        val = self.operations[instruction.operation](instruction.op_a, instruction.op_b)
+        self.registers.saveReg(instruction.target, val)
+
+        return 0
+
+
+    def add(self, a, b):
+        return self.registers.getReg(a) + self.registers.getReg(b)
+        
+    def sub(self, a, b):
+        return self.registers.getReg(a) - self.registers.getReg(b)
+
+    def mul(self, a, b):
+        return self.registers.getReg(a) * self.registers.getReg(b)
+
+    def div(self, a, b):
+        return self.registers.getReg(a) / self.registers.getReg(b)
+
+    def addi(self, a, b):
+        return self.registers.getReg(a) + int(b)
+        
+    def subi(self, a, b):
+        return self.registers.getReg(a) - int(b)
+
+    def muli(self, a, b):
+        return self.registers.getReg(a) * int(b)
+
+    def divi(self, a, b):
+        return self.registers.getReg(a) / int(b)
+
+  
