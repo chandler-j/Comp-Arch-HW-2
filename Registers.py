@@ -19,11 +19,13 @@ class Registers(object):
         for register in RegistersOptions._member_names_:
             self.RegValues[register] = 0x00
 
-        #print("self.RegValues", self.RegValues)
     """
     Saves value to Register
     """
     def saveReg(self, register, value):
+        # registers are only 16 bit, max value = 65535
+        if value > 65535:
+            value = 65535
         self.RegValues[register] = value
 
     """
