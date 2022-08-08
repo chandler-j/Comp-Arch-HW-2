@@ -25,7 +25,6 @@ for line in file.readlines():
     print("DIVI: ", OperationCode.DIVI.value)
     """
     # parse and build instruction
-    print(">> ", line.strip("\n"))
     instruction = interpreter.interpretFile(instruction=line)
 
 

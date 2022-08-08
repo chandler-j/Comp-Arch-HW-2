@@ -30,7 +30,6 @@ class InstructionInterpreter():
         parse instructions
         """
         fields = re.split(self.regex, instruction.strip("\n"))
-        #print(fields)
       
         # grab instruction length
         ins_len = len(fields)
@@ -41,6 +40,7 @@ class InstructionInterpreter():
         operation = fields[0].upper()
         opcode = self.get_opcode(operation)
         binins.extend(opcode)
+
         # validates length and operation
         self.validate_length(ins_len, operation)
 
@@ -49,46 +49,26 @@ class InstructionInterpreter():
         # return the binary representation of the target register
         target = fields[1]
         tarcode = self.get_regcode(target)
-        # opcode.extend(self.get_regcode(target))
-
         binins.extend(tarcode)
+
         # populate op_a, and op_b
         # in 3 arg instructions, op_a == target
         # validate the operands
         op_a, op_b = fields[len(fields) -2 : len(fields)]
 
+        # maximum value for int's is 256, we chop off anything higher
+        if ins_len == 3:
+            print(op_b)
+            op_b = self.check_int(op_b)
+            print(op_b)
         operandcodes = self.get_operandcodes(op_a, op_b, ins_len)
 
         binins.extend(operandcodes)
-        # opcode.extend(operandcodes)
 
-        #print(opcode)
-        self.print_instruction(ins_len, fields, opcode.to01(), tarcode.to01(), operandcodes.to01(), binins.to01())
+        self.print_instruction(ins_len, fields, opcode.to01(), tarcode.to01(), operandcodes.to01(), binins.to01(), instruction.strip("\n"))
     
         ins = Instruction(operation, target, op_a, op_b, ins_len)
         return ins
-
-    def print_instruction(self, ins_len, fields, opcode, tarcode, operandcodes, binins):
-        headers = "{:^12} : {:^12} : {:^12} : {:^12}"
-        field_val = "{:<12} : {:<12} : {:<12} : {:<12}"
-        field_bins = "{:<12} : {:<12} : {:<12} : {:<12}"
-
-
-        short_headers = "{:^12} : {:^12} : {:^12}"
-        short_val = "{:<12} : {:<12} : {:<12}"
-        short_bins = "{:<12} : {:<12} : {:<12}"
-                        
-        print(binins)
-        if ins_len == 4:
-            print(headers.format("operation", "target", "operand A", "operand B"))
-            print("-------------------------------------------------------------")
-            print(field_val.format(fields[0], fields[1], fields[2], fields[3]))
-            print(field_bins.format(opcode, tarcode, operandcodes[0:4], operandcodes[4:8]))
-        if ins_len == 3:
-            print(short_headers.format("operation", "target", "operand A"))
-            print("-------------------------------------------------------------")
-            print(short_val.format(fields[0], fields[1], fields[2]))
-            print(short_bins.format(opcode, tarcode, operandcodes))
 
     def get_opcode(self, operation):
         if operation not in OperationCode._member_names_:
@@ -122,17 +102,41 @@ class InstructionInterpreter():
         return opa
 
     def get_int(self, integer):
-        if not integer.isdigit():
-            sys.exit("MUST PASS INTEGER TO IMMEDIATE INSTRUCTION")
+        word = bitarray('11111111')
+        opb = ''
+        if integer >= 256:
+            opb = word
         else:
-            integer = int(integer)
-            word = bitarray('11111111')
-            opb = ''
-            if integer >= 256:
-                opb = word
-            else:
-                opb = int2ba(int(integer), 8)
-                opb &= word
-            return opb
+            opb = int2ba(int(integer), 8)
+            opb &= word
+        return opb
 
-           
+    def check_int(self, op_b):
+        if not op_b.isdigit():
+            sys.exit("IMMEDIATE INSTRUCTION REQUIRES INT OPERAND")
+        if int(op_b) > 256:
+            op_b = 256
+        return int(op_b)
+
+    def print_instruction(self, ins_len, fields, opcode, tarcode, operandcodes, binins, instruction):
+        headers = "{:^12} : {:^12} : {:^12} : {:^12}"
+        field_val = "{:<12} : {:<12} : {:<12} : {:<12}"
+        field_bins = "{:<12} : {:<12} : {:<12} : {:<12}"
+
+        short_headers = "{:^12} : {:^12} : {:^12}"
+        short_val = "{:<12} : {:<12} : {:<12}"
+        short_bins = "{:<12} : {:<12} : {:<12}"
+                        
+        print(">> {} ---> {}".format( instruction, binins))
+        if ins_len == 4:
+            print(headers.format("operation", "target", "operand A", "operand B"))
+            print("-------------------------------------------------------------")
+            print(field_val.format(fields[0], fields[1], fields[2], fields[3]))
+            print(field_bins.format(opcode, tarcode, operandcodes[0:4], operandcodes[4:8]))
+        if ins_len == 3:
+            print(short_headers.format("operation", "target", "operand A"))
+            print("-------------------------------------------------------------")
+            print(short_val.format(fields[0], fields[1], fields[2]))
+            print(short_bins.format(opcode, tarcode, operandcodes))
+
+      
