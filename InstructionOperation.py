@@ -18,7 +18,9 @@ class OperationCode(enum.Enum):
     ADDI = '1000'
     SUBI = '1001'
     MULI = '1010'
-    DIVI = '1011'
+    DIVI = '1101'
+    STR  = '1011'
+    LD   = '1111'
 
 """
 Base class for our instructions
@@ -38,23 +40,33 @@ class Instruction(object):
 Picks which instruction type based on instructionType bit setting
 """
 class Executer:
-    def __init__(self, registers):
+    def __init__(self, registers, memory):
         self.registers = registers
+        self.memory = memory
         self.operations = {}
         self.operations["ADD"]   = self.add
         self.operations["SUB"]   = self.sub
-        self.operations["MUL"]  = self.mul
+        self.operations["MUL"]   = self.mul
         self.operations["DIV"]   = self.div
         self.operations["ADDI"]  = self.addi
         self.operations["SUBI"]  = self.subi
-        self.operations["MULI"] = self.muli
+        self.operations["MULI"]  = self.muli
         self.operations["DIVI"]  = self.divi
+        self.operations["LD"]    = self.load
+        self.operations["STR"]  = self.store
 
     def execute(self,instruction):
 
 
-        val = self.operations[instruction.operation](instruction.op_a, instruction.op_b)
-        self.registers.saveReg(instruction.target, val)
+        if instruction.operation in ["LD", "STR"]:
+            val = self.operations[instruction.operation](instruction.op_b)
+            if instruction.operation == "LD":
+                self.saveReg(instruction.target, val)
+            else:
+                self.saveMem(instruction.target, val)
+        else:
+            val = self.operations[instruction.operation](instruction.op_a, instruction.op_b)
+            self.registers.saveReg(instruction.target, val)
 
         return 0
 
@@ -82,5 +94,21 @@ class Executer:
 
     def divi(self, a, b):
         return self.registers.getReg(a) / int(b)
+
+    def saveReg(self, target, value):
+        self.registers.saveReg(target, value)
+
+    def saveMem(self, target, value):
+        self.memory.saveMem(target, value) 
+
+    def load(self, memaddr):
+        print("Do Load Thing")
+        return self.memory.getMem(memaddr)
+        # get from memory  
+
+    def store(self, register):
+        print("Do Store Thing")
+        return self.registers.getReg(register)
+        # put in memory
 
   

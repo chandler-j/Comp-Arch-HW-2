@@ -23,9 +23,11 @@ class Registers(object):
     Saves value to Register
     """
     def saveReg(self, register, value):
-        # registers are only 16 bit, max value = 65535
-        if value > 65535:
-            value = 65535
+        # registers are only 16 bit, max value = 32767
+        if value > 32767:
+            value = 32767
+        elif value < -32768:
+            value = -32768
         self.RegValues[register] = value
 
     """

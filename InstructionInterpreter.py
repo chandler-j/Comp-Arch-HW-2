@@ -3,6 +3,8 @@
 # from InstructionOperation import InstructionPicker
 from Registers import Registers
 from Registers import RegistersOptions
+from Memory import Memory
+from Memory import MemoryOptions
 from InstructionOperation import OperationCode
 #from InstructionOperation import InstructionType
 from InstructionOperation import Instruction
@@ -30,93 +32,57 @@ class InstructionInterpreter():
         parse instructions
         """
         fields = re.split(self.regex, instruction.strip("\n"))
-      
-        # grab instruction length
+     
+        binins.extend(self.verify_fields(fields))
+        
         ins_len = len(fields)
-
-        # grab the instruction to be completed 
-        # validate it's a valid instruction
-        # return the binary representation of the opcode
         operation = fields[0].upper()
-        opcode = self.get_opcode(operation)
-        binins.extend(opcode)
-
-        # validates length and operation
-        self.validate_length(ins_len, operation)
-
-        # populate the target 
-        # validates the target ( it will always be a register)
-        # return the binary representation of the target register
         target = fields[1]
-        tarcode = self.get_regcode(target)
-        binins.extend(tarcode)
-
-        # populate op_a, and op_b
-        # in 3 arg instructions, op_a == target
-        # validate the operands
         op_a, op_b = fields[len(fields) -2 : len(fields)]
 
-        # maximum value for int's is 256, we chop off anything higher
-        if ins_len == 3:
-            print(op_b)
-            op_b = self.check_int(op_b)
-            print(op_b)
-        operandcodes = self.get_operandcodes(op_a, op_b, ins_len)
-
-        binins.extend(operandcodes)
-
-        self.print_instruction(ins_len, fields, opcode.to01(), tarcode.to01(), operandcodes.to01(), binins.to01(), instruction.strip("\n"))
+        self.print_instruction(ins_len, fields, binins[0:4].to01(), binins[4:8].to01(), binins[8:16].to01(), binins.to01(), instruction.strip("\n"))
     
         ins = Instruction(operation, target, op_a, op_b, ins_len)
         return ins
 
+        
     def get_opcode(self, operation):
         if operation not in OperationCode._member_names_:
             sys.exit("INVALID INSTRUCTION")
         return bitarray(getattr(OperationCode, operation).value)
 
+    def get_memcode(self, memory):
+        if memory not in MemoryOptions._member_names_:
+            sys.exit("INVALID MEMORY ADDRESS {}".format( memory))
+        return  bitarray(getattr(MemoryOptions, memory).value)
+
     def get_regcode(self, register):
         if register not in RegistersOptions._member_names_:
-            sys.exit("INVALID REGISTER")
+            sys.exit("INVALID REGISTER {}".format( register))
         return  bitarray(getattr(RegistersOptions, register).value)
 
-    def validate_length(self, length, operand):
-        immediates=["ADDI", "SUBI","MULI", "DIVI"]
-        if length == 3:
-            if operand not in immediates:
-                sys.exit("INVALID INSTRUCTION LENGTH")
-        elif length == 4:
-            if operand in immediates:
-                sys.exit("INVALID INSTRUCTION LENGTH")
-        else:
-            sys.exit("INVALID INSTRUCTION LENGHT")
-
-    def get_operandcodes(self, op_a, op_b, length):
-        if length == 3:
-            opa = self.get_int(op_b)
-        elif length == 4:
-            opa = self.get_regcode(op_a)
-            opa.extend(self.get_regcode(op_b))
-        else:
-           sys.exit("INVALID INSTRUCTION LENGTH")
-        return opa
-
     def get_int(self, integer):
-        word = bitarray('11111111')
+        pos_word = bitarray('01111111')
+        neg_word = bitarray('11111111')
         opb = ''
-        if integer >= 256:
-            opb = word
+        if integer >= 126:
+            opb = pos_word
+        elif integer <= -127:
+            opb = neg_word
         else:
             opb = int2ba(int(integer), 8)
-            opb &= word
+            opb &= neg_word
         return opb
 
     def check_int(self, op_b):
-        if not op_b.isdigit():
+        try:
+            if int(op_b) > 126:
+                op_b = 126
+            elif int(op_b) < -127:
+                op_b = -127
+            return int(op_b)
+        except ValueError:
             sys.exit("IMMEDIATE INSTRUCTION REQUIRES INT OPERAND")
-        if int(op_b) > 256:
-            op_b = 256
-        return int(op_b)
 
     def print_instruction(self, ins_len, fields, opcode, tarcode, operandcodes, binins, instruction):
         headers = "{:^12} : {:^12} : {:^12} : {:^12}"
@@ -139,4 +105,51 @@ class InstructionInterpreter():
             print(short_val.format(fields[0], fields[1], fields[2]))
             print(short_bins.format(opcode, tarcode, operandcodes))
 
-      
+    def verify_fields(self, fields):
+        fields[0] = fields[0].upper()
+        REGULAR = ["ADD", "SUB", "MUL", "DIV"]
+        IMMEDIATE = ["ADDI", "SUBI", "MULI", "DIVI"]
+        MEMORY = ["LD", "STR"]
+        instruction = bitarray()
+        instruction.extend(self.get_opcode(fields[0]))
+        if fields[0] in REGULAR:
+            instruction.extend(self.verify_regular(fields))
+        elif fields[0] in IMMEDIATE:
+            instruction.extend(self.verify_immediate(fields))
+        elif fields[0] in MEMORY:
+            instruction.extend(self.verify_memory(fields))
+        else:
+            sys.exit("INVALID COMMAND")
+        return instruction
+
+    def verify_regular(self, fields):
+        if len(fields) != 4:
+            sys.exit("INVALID NUMBER OF ARGUMENTS TO {}".format(fields[0]))
+
+        registers = bitarray()
+        for reg in fields[1:]:
+            registers.extend(self.get_regcode(reg))
+        return registers
+
+    def verify_immediate(self, fields):
+        if len(fields) != 3:
+            sys.exit("INVALID NUMBER OF ARGUMENTS TO {}".format(fields[0]))
+        operands = bitarray()
+        operands.extend(self.get_regcode(fields[1]))
+        try:
+            operands.extend(self.get_int(int(fields[2])))
+        except ValueError:
+            sys.exit("INVALID OPERAND {}".format(fields[2]))
+        return operands
+
+    def verify_memory(self, fields):
+        if len(fields) != 3:
+            sys.exit("INVALID NUMBER OF ARGUMENTS TO {}".format(fields[0]))
+        addresses = bitarray()
+        if fields[0] == "LD":
+            addresses.extend(self.get_regcode(fields[1]))
+            addresses.extend(self.get_memcode(fields[2]))
+        else:
+            addresses.extend(self.get_memcode(fields[1]))
+            addresses.extend(self.get_regcode(fields[2]))
+        return addresses
