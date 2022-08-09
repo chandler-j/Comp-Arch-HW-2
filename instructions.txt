@@ -1,5 +1,7 @@
-addi R1, 1
-muli R2, 1024
+addi R1, 10
+addi R2, 15
+add R3, R1, R2
+divi R3, 5
 subi R3, -256
 divi R3, 45
 add R1, R2, R3

@@ -118,6 +118,7 @@ class InstructionInterpreter():
             instruction.extend(self.verify_immediate(fields))
         elif fields[0] in MEMORY:
             instruction.extend(self.verify_memory(fields))
+            instruction.extend('0000')
         else:
             sys.exit("INVALID COMMAND")
         return instruction

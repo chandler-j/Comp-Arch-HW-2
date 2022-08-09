@@ -81,7 +81,10 @@ class Executer:
         return self.registers.getReg(a) * self.registers.getReg(b)
 
     def div(self, a, b):
-        return self.registers.getReg(a) / self.registers.getReg(b)
+        try:
+            return int(self.registers.getReg(a) / self.registers.getReg(b))
+        except ZeroDivisionError:
+            sys.exit("Division BY 0 ERROR")
 
     def addi(self, a, b):
         return self.registers.getReg(a) + int(b)
@@ -93,7 +96,10 @@ class Executer:
         return self.registers.getReg(a) * int(b)
 
     def divi(self, a, b):
-        return self.registers.getReg(a) / int(b)
+        try:
+            return int(self.registers.getReg(a) / int(b))
+        except ZeroDivisionError:
+            sys.exit("DIVISION BY 0 ERROR")
 
     def saveReg(self, target, value):
         self.registers.saveReg(target, value)
