@@ -27,13 +27,14 @@ Base class for our instructions
 """
 
 class Instruction(object):
-    def __init__(self, operation, target, op_a, op_b, ins_len):
+    def __init__(self, operation, target, op_a, op_b, ins_len, bin_ins):
         
         self.operation = operation
         self.target = target
         self.op_a = op_a
         self.op_b = op_b
         self.ins_len = ins_len
+        self.bin_ins = bin_ins
 
 
 """

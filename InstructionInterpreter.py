@@ -42,7 +42,7 @@ class InstructionInterpreter():
 
         self.print_instruction(ins_len, fields, binins[0:4].to01(), binins[4:8].to01(), binins[8:16].to01(), binins.to01(), instruction.strip("\n"))
     
-        ins = Instruction(operation, target, op_a, op_b, ins_len)
+        ins = Instruction(operation, target, op_a, op_b, ins_len, binins)
         return ins
 
         
@@ -76,13 +76,19 @@ class InstructionInterpreter():
 
     def check_int(self, op_b):
         try:
+            return int(op_b)
+        except ValueError:
+            sys.exit("IMMEDIATE INSTRUCTION REQUIRES INT OPERAND")
+
+    def limit_int(self, op_b):
+        try:
             if int(op_b) > 126:
                 op_b = 126
             elif int(op_b) < -127:
                 op_b = -127
             return int(op_b)
         except ValueError:
-            sys.exit("IMMEDIATE INSTRUCTION REQUIRES INT OPERAND")
+            return op_b
 
     def print_instruction(self, ins_len, fields, opcode, tarcode, operandcodes, binins, instruction):
         headers = "{:^12} : {:^12} : {:^12} : {:^12}"
@@ -112,6 +118,7 @@ class InstructionInterpreter():
         MEMORY = ["LD", "STR"]
         instruction = bitarray()
         instruction.extend(self.get_opcode(fields[0]))
+        fields[2] = self.limit_int(fields[2])
         if fields[0] in REGULAR:
             instruction.extend(self.verify_regular(fields))
         elif fields[0] in IMMEDIATE:

@@ -17,7 +17,6 @@ for line in file.readlines():
     # parse and build instruction
     instruction = interpreter.interpretFile(instruction=line)
 
-
     print("Registers Before: ", executer.registers.RegValues)
     print("Memory Before   : ", executer.memory.MemValues)
     # execute instruction
